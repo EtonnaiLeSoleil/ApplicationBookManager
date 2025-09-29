@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}📚 Liste des livres{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1 class="mb-4">📚 Tous les livres</h1>
+
+        {# Formulaire recherche + filtre #}
+        <form method="get" action="{{ path('book_index') }}" class="mb-3 d-flex gap-2">
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher par titre...">
+            <select name="genre" class="form-select">
+                <option value="">-- Filtrer par genre --</option>
+                <option value="roman" {{ genre == 'roman' ? 'selected' }}>Roman</option>
+                <option value="sf" {{ genre == 'sf' ? 'selected' }}>Science-fiction</option>
+                <option value="histoire" {{ genre == 'histoire' ? 'selected' }}>Histoire</option>
+            </select>
+            <button class="btn btn-primary">Filtrer</button>
+        </form>
+
+        {# Affichage des livres #}
+        {% if books is not empty %}
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for book in books %}
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            {% if book.coverImage %}
+                                <img src="{{ asset(book.coverImage) }}" class="card-img-top" alt="{{ book.title }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/300x400?text=Pas+d%27image" class="card-img-top" alt="No image">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="card-text"><strong>Auteur :</strong> {{ book.author }}</p>
+                                <p class="card-text"><strong>Genre :</strong> {{ book.genre }}</p>
+                                <a href="{{ path('book_show', {slug: book.slug}) }}" class="btn btn-outline-primary btn-sm">Détails</a>
+                                {% if is_granted('BOOK_EDIT', book) %}
+                                    <a href="{{ path('book_edit', {slug: book.slug}) }}" class="btn btn-outline-warning btn-sm">Modifier</a>
+                                {% endif %}
+                                {% if is_granted('BOOK_DELETE', book) %}
+                                    <form method="post" action="{{ path('book_delete', {slug: book.slug}) }}" style="display:inline-block"
+                                          onsubmit="return confirm('Supprimer ce livre ?');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ book.id) }}">
+                                        <button class="btn btn-outline-danger btn-sm">Supprimer</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">Aucun livre trouvé.</div>
+        {% endif %}
+    </div>
+{% endblock %}

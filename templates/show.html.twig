@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1 class="mb-3">{{ book.title }}</h1>
+
+        <div class="row">
+            <div class="col-md-4">
+                {% if book.coverImage %}
+                    <img src="{{ asset(book.coverImage) }}" alt="Couverture de {{ book.title }}" class="img-fluid rounded shadow-sm">
+                {% else %}
+                    <div class="alert alert-secondary">Pas d'image disponible</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-8">
+                <ul class="list-group mb-3">
+                    <li class="list-group-item"><strong>Auteur :</strong> {{ book.author }}</li>
+                    <li class="list-group-item"><strong>Genre :</strong> {{ book.genre }}</li>
+                    <li class="list-group-item"><strong>Description :</strong> {{ book.description ?: 'Aucune description' }}</li>
+                    <li class="list-group-item"><strong>Ajouté le :</strong> {{ book.createdAt|date('d/m/Y H:i') }}</li>
+                    <li class="list-group-item"><strong>Dernière mise à jour :</strong> {{ book.updatedAt|date('d/m/Y H:i') }}</li>
+                </ul>
+
+                <div class="d-flex gap-2">
+                    <a href="{{ path('book_index') }}" class="btn btn-secondary">← Retour</a>
+
+                    {% if is_granted('BOOK_EDIT', book) %}
+                        <a href="{{ path('book_edit', {id: book.id}) }}" class="btn btn-warning">Modifier</a>
+                    {% endif %}
+
+                    {% if is_granted('BOOK_DELETE', book) %}
+                        <form method="post" action="{{ path('book_delete', {id: book.id}) }}"
+                              onsubmit="return confirm('Supprimer ce livre ?');" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ book.id) }}">
+                            <button class="btn btn-danger">Supprimer</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
