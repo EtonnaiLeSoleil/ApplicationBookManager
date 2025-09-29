@@ -25,6 +25,14 @@
             {% endif %}
         </div>
     </div>
+    {% if app.user %}
+        <span class="navbar-text me-2">Bonjour {{ app.user.email }}</span>
+        <a class="btn btn-outline-danger btn-sm" href="{{ path('app_logout') }}">Déconnexion</a>
+    {% else %}
+        <a class="btn btn-outline-primary btn-sm me-2" href="{{ path('app_login') }}">Connexion</a>
+        <a class="btn btn-success btn-sm" href="{{ path('app_register') }}">Inscription</a>
+    {% endif %}
+
 </nav>
 
 <div class="container">

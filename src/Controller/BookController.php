@@ -22,22 +22,18 @@ class BookController extends AbstractController
         $genre = $request->query->get('genre');
         $q = $request->query->get('q');
 
-        $qb = $bookRepository->createQueryBuilder('b');
-
-        if ($genre) {
-            $qb->andWhere('b.genre = :genre')
-                ->setParameter('genre', $genre);
-        }
-
         if ($q) {
-            $qb->andWhere('b.title LIKE :q')
-                ->setParameter('q', '%' . $q . '%');
+            $books = $bookRepository->searchByTitle($q);
+        } elseif ($genre) {
+            $books = $bookRepository->findByGenre($genre);
+        } else {
+            $books = $bookRepository->findBy([], ['createdAt' => 'DESC']);
         }
-
-        $books = $qb->getQuery()->getResult();
 
         return $this->render('book/index.html.twig', [
             'books' => $books,
+            'q' => $q,
+            'genre' => $genre,
         ]);
     }
 
@@ -46,7 +42,7 @@ class BookController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $books = $bookRepository->findBy(['user' => $this->getUser()]);
+        $books = $bookRepository->findBy(['user' => $this->getUser()], ['createdAt' => 'DESC']);
 
         return $this->render('book/my.html.twig', [
             'books' => $books,
@@ -58,7 +54,8 @@ class BookController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         ImageUploader $uploader,
-        SluggerInterface $slugger
+        SluggerInterface $slugger,
+        BookRepository $bookRepository
     ): Response {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
@@ -68,6 +65,10 @@ class BookController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $slug = strtolower($slugger->slug($book->getTitle()));
+            // Vérifie unicité
+            if ($bookRepository->findOneBy(['slug' => $slug])) {
+                $slug .= '-' . time();
+            }
             $book->setSlug($slug);
             $book->setUser($this->getUser());
 
@@ -94,13 +95,14 @@ class BookController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'book_edit', methods: ['GET','POST'])]
+    #[Route('/{slug}/edit', name: 'book_edit', methods: ['GET','POST'])]
     public function edit(
         Request $request,
         Book $book,
         EntityManagerInterface $em,
         ImageUploader $uploader,
-        SluggerInterface $slugger
+        SluggerInterface $slugger,
+        BookRepository $bookRepository
     ): Response {
         $this->denyAccessUnlessGranted('BOOK_EDIT', $book);
 
@@ -111,6 +113,11 @@ class BookController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $slug = strtolower($slugger->slug($book->getTitle()));
+            // Vérifie unicité
+            $existing = $bookRepository->findOneBy(['slug' => $slug]);
+            if ($existing && $existing->getId() !== $book->getId()) {
+                $slug .= '-' . time();
+            }
             $book->setSlug($slug);
 
             /** @var UploadedFile $coverFile */
@@ -139,7 +146,7 @@ class BookController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'book_delete', methods: ['POST'])]
+    #[Route('/{slug}/delete', name: 'book_delete', methods: ['POST'])]
     public function delete(Request $request, Book $book, EntityManagerInterface $em, ImageUploader $uploader): Response
     {
         $this->denyAccessUnlessGranted('BOOK_DELETE', $book);
